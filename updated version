@@ -1,0 +1,105 @@
+/******************************************************************************
+Heart_Rate_Display.ino
+Demo Program for AD8232 Heart Rate sensor.
+Modified Sylvain Lareau 14 fev 2018
+from  
+Casey Kuhns @ SparkFun Electronics
+6/27/2014
+https://github.com/sparkfun/AD8232_Heart_Rate_Monitor
+The AD8232 Heart Rate sensor is a low cost EKG/ECG sensor. 
+
+
+The original vervion did not work form me so I did some change...
+
+
+This Processing programme work in conjoncute with the Arduino skecth
+https://github.com/sparkfun/AD8232_Heart_Rate_Monitor/blob/master/Software/Heart_Rate_Display_Arduino/Heart_Rate_Display_Arduino.ino
+I have adapt that sketch to work with Teensy 3.6 buy changing the the pinmode and digitalread to proper pin number.
+You might have to adjust the delay ()  at the bottom of the sketch according to the speed of your processor.
+
+In the  processing programme, I have wrote some //checkpoint to observe critical number.  Just remove the // before thefollowing  println to see the number.
+
+
+On my board, the electrode lead label and did not match the connector on the board.  Trust only the connector board label, not what is printed on the electrode wire.
+
+
+
+Distributed as-is; no warranty is given.
+******************************************************************************/
+
+import processing.serial.*;
+
+Serial myPort;        // The serial port
+int xPos = 1;         // horizontal position of the graph
+float height_old ;
+float height_new ;
+float inByte ;
+boolean newData = false;
+
+void setup () {
+  // set the window size:
+  size(1500, 600); 
+    height_old = height/2;
+    height_new = height/2;
+   inByte = height/2;
+
+  // List all the available serial ports at the bottom of the console  from 0 to x  
+  println(Serial.list());
+  // Open whatever port is the one you're using.  :  On my mac my USB port is 1  so I put   Serial.list()[1]
+  myPort = new Serial(this, Serial.list()[1], 9600);
+  // don't generate a serialEvent() unless you get a newline character:
+  myPort.bufferUntil('\n');
+  // set inital background:
+  background(0xff);
+}
+
+
+void draw () {
+   height_new = height - inByte; 
+     //checkpoint
+     // println (xPos-1, height_old,xPos, height_new);
+     line(xPos - 1, height_old, xPos, height_new);
+     height_old = height_new;
+    
+      // at the edge of the screen, go back to the beginning:
+      if (xPos >= width) {
+        xPos = 1;
+        background(0xff);
+      } 
+      else {
+        // increment the horizontal position:
+        xPos++;
+      }
+}
+
+
+void serialEvent (Serial myPort) {
+  // get the ASCII string:
+  String inString = myPort.readStringUntil('\n');
+    //checkpoint
+    //println (inString);
+
+  if (inString != null) {
+    // trim off any whitespace:
+    inString = trim(inString);
+   
+
+    // If leads off detection is true notify with blue line
+    if (inString.equals("!")) { 
+      stroke(0, 0, 0xff); //Set stroke to blue ( R, G, B)
+      inByte = height/2;  // middle of the ADC range (Flat Line)
+      newData = true;
+    }
+    // If the data is good let it through
+    else {
+      stroke(0xff, 0, 0); //Set stroke to red ( R, G, B)
+      inByte = float(inString); 
+     inByte = map(inByte, 0, 1023, 0, height);
+     newData = true;
+      //checkpoint
+     //println (inByte);
+     }
+     
+    
+  }
+}
